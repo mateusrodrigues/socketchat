@@ -18,7 +18,7 @@ class Message:
         return str(self.size) + "\t" + self.recipient + "\t" + self.command + "\t" + self.data
 
     def decode(self, payload):
-        fields = str(payload).split('\t', maxsplit=4)
+        fields = str(payload).split('\t', maxsplit=3)
 
         self.size = fields[0]
         self.recipient = fields[1]
