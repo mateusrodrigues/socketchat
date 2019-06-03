@@ -1,6 +1,6 @@
 class Message:
     def __init__(self, command="", data=""):
-        if len(command) > 8:
+        if len(command) > 10:
             raise Exception("Command is invalid.")
 
         # define class properties

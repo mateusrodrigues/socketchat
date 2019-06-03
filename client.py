@@ -38,6 +38,11 @@ while True:
     elif sentence.startswith("lista()"):
         message = Message("lista()", "")
         encodedCommand = message.encode()
+    elif sentence.startswith("privado("):
+        endOfParenthesis = sentence.find(')')
+        name = sentence[8:endOfParenthesis]
+        message = Message("privado()", name)
+        encodedCommand = message.encode()
     else:
         # this is a regular message
         message = Message("", sentence)

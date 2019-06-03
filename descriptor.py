@@ -4,7 +4,7 @@ from message import Message
 
 
 class Descriptor(threading.Thread):
-    def __init__(self, name, ip, port, socket_connection, get_connected_clients, broadcast_to_others):
+    def __init__(self, name, ip, port, socket_connection, get_connected_clients, broadcast_to_others, send_to_client):
         super().__init__()
         self.id = uuid.uuid4()
         self.name = name
@@ -12,8 +12,11 @@ class Descriptor(threading.Thread):
         self.port = port
         self.connection = socket_connection
         self.active = True
+        self.in_private = False
+        self.private_dest_id = uuid.uuid4()
         self.get_connected_clients = get_connected_clients
         self.broadcast_to_others = broadcast_to_others
+        self.send_to_client = send_to_client
 
     def send_message_from_outside(self, origin_id, message):
         if self.id != origin_id and self.active:
@@ -43,9 +46,24 @@ class Descriptor(threading.Thread):
                 elif message.command == "lista()":
                     response = ""
                     for client in self.get_connected_clients():
-                        response += f"<{client.name}, {client.ip}, {client.port}>\n"
+                        if client.in_private:
+                            response += f"<{client.name}(privado), {client.ip}, {client.port}>\n"
+                        else:
+                            response += f"<{client.name}, {client.ip}, {client.port}>\n"
                     response_message = Message(data=response)
                     self.connection.send(response_message.encode(public=False, recipient=self.name).encode('utf-8'))
+                    continue
+                elif message.command == "privado()":
+                    self.in_private = True
+                    clients = self.get_connected_clients()
+                    # get the client this person wants to connect to
+                    for c in clients:
+                        if c.name == message.data:
+                            self.in_private = True
+                            c.in_private = True
+                            self.private_dest_id = c.id
+                            c.private_dest_id = self.id
+                            break
                     continue
 
                 # broadcast received message to other connections
@@ -53,10 +71,13 @@ class Descriptor(threading.Thread):
                 if len(self.name) == 0:
                     self.connection.send("You don't have a name yet. Message not sent".encode('utf-8'))
                 else:
-                    broadcast_message = f"{self.name} says: {message.data}"
-                    message = Message(data=broadcast_message)
-                    print(broadcast_message)
-                    self.broadcast_to_others(self.id, message)
+                    message_content = f"{self.name} says: {message.data}"
+                    message = Message(data=message_content)
+                    if self.in_private:
+                        self.send_to_client(self.id, self.private_dest_id, message)
+                    else:
+                        print(message_content)
+                        self.broadcast_to_others(self.id, message)
 
             except ConnectionResetError:
                 exit_announcement = f"{self.name} saiu..."
