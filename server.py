@@ -17,7 +17,11 @@ print('Chatroom created and awaiting for connections on port %d ...' % serverPor
 
 def global_sender(origin_id, message):
     for c in clients:
-        c.broadcast_from_outside(origin_id, message)
+        c.send_message_from_outside(origin_id, message)
+
+
+def get_connected_clients():
+    return list(filter(lambda c: c.active, clients))
 
 
 while True:
@@ -35,7 +39,7 @@ while True:
     nickname = nickname_message.data
 
     # initializes the client descriptor for its thread
-    client = Descriptor(nickname, addr[0], addr[1], connectionSocket, global_sender)
+    client = Descriptor(nickname, addr[0], addr[1], connectionSocket, get_connected_clients, global_sender)
 
     # starts the client thread
     clients.append(client)
