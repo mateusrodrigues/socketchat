@@ -43,6 +43,9 @@ while True:
         name = sentence[8:endOfParenthesis]
         message = Message("privado()", name)
         encodedCommand = message.encode()
+    elif sentence.startswith("sairp()"):
+        message = Message("sairp()", "")
+        encodedCommand = message.encode()
     else:
         # this is a regular message
         message = Message("", sentence)

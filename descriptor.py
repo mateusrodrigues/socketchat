@@ -65,6 +65,16 @@ class Descriptor(threading.Thread):
                             c.private_dest_id = self.id
                             break
                     continue
+                elif message.command == "sairp()":
+                    if self.in_private:
+                        self.in_private = False
+                        clients = self.get_connected_clients()
+                        # get the client this person wants to connect to
+                        for c in clients:
+                            if c.id == self.private_dest_id:
+                                c.in_private = False
+                                break
+                    continue
 
                 # broadcast received message to other connections
                 # and print at server level

@@ -6,7 +6,8 @@ class Message:
         # define class properties
         self.recipient = ""
         self.command = command
-        self.data = data[:80] if len(data) > 80 else data
+        # self.data = data[:80] if len(data) > 80 else data
+        self.data = data
         self.size = len(self.data)
 
     def encode(self, public=True, recipient=""):
