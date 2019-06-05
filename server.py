@@ -1,3 +1,4 @@
+import threading
 from socket import *
 from descriptor import Descriptor
 from message import Message
@@ -10,6 +11,7 @@ serverSocket.bind((serverName, serverPort))  # binding IP and server port
 serverSocket.listen(1)                       # socket ready to listen to connections
 
 clients = []                                 # client definitions dictionary
+isShuttingDown = False
 
 # print server status
 print('Chatroom created and awaiting for connections on port %d ...' % serverPort)
@@ -31,7 +33,29 @@ def get_connected_clients():
     return list(filter(lambda c: c.active, clients))
 
 
+def get_user_input():
+    while True:
+        sentence = input()
+
+        if sentence == "lista()":
+            for c in clients:
+                if c.in_private:
+                    print(f"<{c.name}(privado), {c.ip}, {c.port}>\n")
+                else:
+                    print(f"<{c.name}, {c.ip}, {c.port}>\n")
+        elif sentence == "sair()":
+            for c in clients:
+                c.connection.close()
+            isShuttingDown = True
+
+
+input_thread = threading.Thread(target=get_user_input)
+input_thread.start()
+
 while True:
+    if isShuttingDown:
+        break
+
     # accepts a new connection into the socket server
     connectionSocket, addr = serverSocket.accept()
 
@@ -52,12 +76,3 @@ while True:
     # starts the client thread
     clients.append(client)
     client.start()
-
-#     sentence = connectionSocket.recv(1024) # recebe dados do cliente
-#     sentence = sentence.decode('utf-8')
-#     capitalizedSentence = sentence.upper() # converte em letras maiusculas
-#     print ('Cliente %s enviou: %s, transformando em: %s' % (addr, sentence, capitalizedSentence))
-#     connectionSocket.send(capitalizedSentence.encode('utf-8')) # envia para o cliente o texto transformado
-#     connectionSocket.close() # encerra o socket com o cliente
-#
-# serverSocket.close()  # encerra o socket do servidor

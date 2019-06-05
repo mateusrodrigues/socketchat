@@ -139,3 +139,11 @@ class Descriptor(threading.Thread):
                 self.broadcast_to_others(self.id, exit_message)
                 self.active = False
                 break
+
+            except ConnectionAbortedError:
+                exit_announcement = f"{self.name} saiu..."
+                print(exit_announcement)
+                exit_message = Message(data=exit_announcement)
+                self.broadcast_to_others(self.id, exit_message)
+                self.active = False
+                break
