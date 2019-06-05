@@ -36,7 +36,7 @@ while True:
     connectionSocket, addr = serverSocket.accept()
 
     # ask for a nickname
-    nickname_message = Message(data="Please, type in a nickname for you: ")
+    nickname_message = Message(data="Digite um nickname para você: ")
     connectionSocket.send(nickname_message.encode().encode('utf-8'))
 
     # wait for nickname

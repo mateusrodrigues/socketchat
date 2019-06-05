@@ -13,6 +13,8 @@ class Descriptor(threading.Thread):
         self.connection = socket_connection
         self.active = True
         self.in_private = False
+        self.in_private_request = False
+        self.in_private_request_sender = uuid.uuid4()
         self.private_dest_id = uuid.uuid4()
         self.get_connected_clients = get_connected_clients
         self.broadcast_to_others = broadcast_to_others
@@ -31,6 +33,37 @@ class Descriptor(threading.Thread):
         while True:
             try:
                 payload = self.connection.recv(1024)
+
+                if self.in_private_request:
+                    self.in_private_request = False
+                    payload = payload.decode('utf-8')
+
+                    response_message = Message()
+                    response_message.decode(payload)
+
+                    if response_message.data == "y":
+                        self.in_private = True
+                        # configure private connection
+                        for c in self.get_connected_clients():
+                            if c.id == self.in_private_request_sender:
+                                c.in_private = True
+                                self.private_dest_id = c.id
+                                c.private_dest_id = self.id
+
+                                response_message = Message(data=f"{c.name} aceitou seu convite")
+                                c.connection.send(
+                                    response_message.encode(public=False, recipient=self.name).encode('utf-8'))
+
+                                break
+                    else:
+                        for c in self.get_connected_clients():
+                            if c.id == self.in_private_request_sender:
+                                response_message = Message(data=f"{c.name} negou seu convite")
+                                c.connection.send(
+                                    response_message.encode(public=False, recipient=self.name).encode('utf-8'))
+                                break
+                    continue
+
                 payload = payload.decode('utf-8')
 
                 # decodes a message from received payload
@@ -54,15 +87,17 @@ class Descriptor(threading.Thread):
                     self.connection.send(response_message.encode(public=False, recipient=self.name).encode('utf-8'))
                     continue
                 elif message.command == "privado()":
-                    self.in_private = True
                     clients = self.get_connected_clients()
                     # get the client this person wants to connect to
                     for c in clients:
                         if c.name == message.data:
-                            self.in_private = True
-                            c.in_private = True
-                            self.private_dest_id = c.id
-                            c.private_dest_id = self.id
+                            # request private connection
+                            request_message = Message(
+                                data=f"{self.name} quer conectar privado com você. Continuar? (y/n)")
+                            request_encoded = request_message.encode(public=False, recipient=c.name)
+                            c.in_private_request = True
+                            c.in_private_request_sender = self.id
+                            c.connection.send(request_encoded.encode('utf-8'))
                             break
                     continue
                 elif message.command == "sairp()":
@@ -72,6 +107,14 @@ class Descriptor(threading.Thread):
                         # get the client this person wants to connect to
                         for c in clients:
                             if c.id == self.private_dest_id:
+
+                                exit_announcement = "Você saiu do chat privado"
+                                exit_message = Message(data=exit_announcement)
+                                exit_encoded = exit_message.encode(public=False, recipient=c.name)
+
+                                self.connection.send(exit_encoded.encode('utf-8'))
+                                c.send_message_from_outside(self.id, exit_message)
+
                                 c.in_private = False
                                 break
                     continue
@@ -79,9 +122,9 @@ class Descriptor(threading.Thread):
                 # broadcast received message to other connections
                 # and print at server level
                 if len(self.name) == 0:
-                    self.connection.send("You don't have a name yet. Message not sent".encode('utf-8'))
+                    self.connection.send("Você não tem um nickname. Mensagem não enviada.".encode('utf-8'))
                 else:
-                    message_content = f"{self.name} says: {message.data}"
+                    message_content = f"{self.name} disse: {message.data}"
                     message = Message(data=message_content)
                     if self.in_private:
                         self.send_to_client(self.id, self.private_dest_id, message)
